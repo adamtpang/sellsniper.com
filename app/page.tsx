@@ -2,16 +2,62 @@
 
 import { useState } from "react";
 
+type Stage = {
+  platform: string;
+  specific_location: string;
+  why_this_fits: string;
+  draft_message: string;
+  best_time_to_post?: string;
+};
+
+type ScanResponse = {
+  url: string;
+  product: string;
+  problem_solved: string;
+  audience: string;
+  stages: Stage[];
+};
+
 export default function Home() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<ScanResponse | null>(null);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
   async function handleScan(e: React.FormEvent) {
     e.preventDefault();
     if (!url) return;
     setLoading(true);
-    // TODO: wire to /api/scan once built
-    setTimeout(() => setLoading(false), 1500);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error ?? `Scan failed (${res.status})`);
+      } else {
+        setResult(data as ScanResponse);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function copyMessage(text: string, idx: number) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx((v) => (v === idx ? null : v)), 1500);
+    } catch {
+      /* clipboard blocked; ignore */
+    }
   }
 
   return (
@@ -61,6 +107,77 @@ export default function Home() {
         <p className="text-xs text-zinc-600">
           Free — no signup. Scan any link in under 30 seconds.
         </p>
+
+        {/* Results */}
+        {error && (
+          <div className="mt-10 max-w-2xl mx-auto text-left border border-red-500/40 bg-red-500/5 rounded-lg p-4 text-sm text-red-300">
+            {error}
+          </div>
+        )}
+
+        {loading && !result && (
+          <div className="mt-10 max-w-2xl mx-auto text-left text-zinc-500 text-sm animate-pulse">
+            Reverse-engineering your link and mapping audience stages...
+          </div>
+        )}
+
+        {result && (
+          <div className="mt-12 max-w-3xl mx-auto text-left">
+            <div className="border border-zinc-800 rounded-xl p-6 mb-8 bg-zinc-950">
+              <div className="text-xs uppercase tracking-wider text-zinc-500 mb-2">Target</div>
+              <div className="text-lg font-semibold mb-3">{result.product}</div>
+              <div className="grid sm:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="text-zinc-500 text-xs mb-1">Problem solved</div>
+                  <div className="text-zinc-200">{result.problem_solved}</div>
+                </div>
+                <div>
+                  <div className="text-zinc-500 text-xs mb-1">Audience</div>
+                  <div className="text-zinc-200">{result.audience}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-xs uppercase tracking-wider text-zinc-500 mb-3">
+              {result.stages?.length ?? 0} stages · ranked by fit
+            </div>
+            <div className="space-y-4">
+              {result.stages?.map((stage, idx) => (
+                <div
+                  key={idx}
+                  className="border border-zinc-800 rounded-xl p-5 bg-zinc-950 hover:border-zinc-700 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <div>
+                      <div className="text-xs text-red-400 uppercase tracking-wider mb-1">
+                        {stage.platform}
+                      </div>
+                      <div className="font-semibold text-white">{stage.specific_location}</div>
+                    </div>
+                    <div className="text-xs text-zinc-600 font-mono">#{idx + 1}</div>
+                  </div>
+                  <div className="text-sm text-zinc-400 mb-3">{stage.why_this_fits}</div>
+                  <div className="relative">
+                    <pre className="whitespace-pre-wrap text-sm text-zinc-200 bg-black border border-zinc-800 rounded-lg p-4 font-sans">
+{stage.draft_message}
+                    </pre>
+                    <button
+                      onClick={() => copyMessage(stage.draft_message, idx)}
+                      className="absolute top-2 right-2 px-2 py-1 text-xs border border-zinc-800 rounded bg-zinc-900 hover:border-zinc-600"
+                    >
+                      {copiedIdx === idx ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                  {stage.best_time_to_post && (
+                    <div className="text-xs text-zinc-500 mt-2">
+                      Best time: {stage.best_time_to_post}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Social proof / examples */}
