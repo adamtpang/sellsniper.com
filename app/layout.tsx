@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://sellsniper.com"),
   title: "SellSniper — Find the humans who'd love this",
   description:
     "Paste any link — a product, essay, song, bug fix, demo. SellSniper finds the exact humans who'd love it, and drafts the message that gets their attention. Stop shouting into the void.",
@@ -31,12 +32,14 @@ export const metadata: Metadata = {
     url: "https://sellsniper.com",
     siteName: "SellSniper",
     type: "website",
+    images: [{ url: "/og.svg", width: 1200, height: 630, alt: "SellSniper — stop shouting into the void" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "SellSniper — Find the humans who'd love this",
     description:
       "Stop shouting into the void. Paste any link, find the exact humans who'd care.",
+    images: ["/og.svg"],
   },
 };
 

@@ -99,6 +99,7 @@ async function fetchSnapshot(url: string): Promise<PageSnapshot> {
         accept: "text/html,application/xhtml+xml",
       },
     });
+    if (!res.ok) throw new Error(`Fetch returned ${res.status}`);
     html = await res.text();
   } finally {
     clearTimeout(timer);
@@ -111,6 +112,12 @@ async function fetchSnapshot(url: string): Promise<PageSnapshot> {
 
   const bodyMatch = html.match(/<body[\s\S]*?<\/body>/i);
   const bodyText = stripTags(bodyMatch ? bodyMatch[0] : html).slice(0, 4000);
+
+  if (bodyText.length < 200 && !title) {
+    throw new Error(
+      "We couldn't read this page — it may be JS-rendered or paywalled. Try a different URL.",
+    );
+  }
 
   return {
     url,

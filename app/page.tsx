@@ -70,7 +70,6 @@ export default function Home() {
         <div className="flex gap-6 text-sm text-zinc-400">
           <a href="#how" className="hover:text-white">How it works</a>
           <a href="#pricing" className="hover:text-white">Pricing</a>
-          <a href="#demo" className="hover:text-white">Demo</a>
         </div>
       </nav>
 
@@ -245,11 +244,15 @@ export default function Home() {
             <div className="text-4xl font-bold mb-2">$0</div>
             <div className="text-sm text-zinc-500 mb-6">forever</div>
             <ul className="space-y-3 text-sm text-zinc-300 mb-8">
-              <li>3 scans per month</li>
-              <li>Top 5 stages per scan</li>
+              <li>3 scans per day</li>
+              <li>Top 10 stages per scan</li>
               <li>Basic message drafts</li>
             </ul>
-            <button className="w-full py-3 border border-zinc-700 rounded-lg hover:border-zinc-500 transition-colors">
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="w-full py-3 border border-zinc-700 rounded-lg hover:border-zinc-500 hover:bg-zinc-900 transition-colors cursor-pointer"
+            >
               Start free
             </button>
           </div>
@@ -265,9 +268,12 @@ export default function Home() {
               <li>Best time to post</li>
               <li>Auto-follow-up reminders</li>
             </ul>
-            <button className="w-full py-3 bg-red-500 hover:bg-red-600 rounded-lg transition-colors font-semibold">
-              Upgrade to Pro
-            </button>
+            <a
+              href="mailto:adam@anchormarianas.com?subject=SellSniper Pro waitlist"
+              className="block w-full py-3 bg-red-500 hover:bg-red-600 rounded-lg transition-colors font-semibold text-center cursor-pointer"
+            >
+              Join Pro waitlist
+            </a>
           </div>
         </div>
       </section>
