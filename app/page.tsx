@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Stage = {
   platform: string;
@@ -24,6 +24,49 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResponse | null>(null);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [loadingStage, setLoadingStage] = useState(0);
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistStatus, setWaitlistStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingStage(0);
+      return;
+    }
+    const t1 = setTimeout(() => setLoadingStage(1), 5000);
+    const t2 = setTimeout(() => setLoadingStage(2), 10000);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [loading]);
+
+  const loadingMessages = [
+    "Reading your link...",
+    "Inferring your audience...",
+    "Ranking stages by fit...",
+  ];
+
+  async function handleWaitlist(e: React.FormEvent) {
+    e.preventDefault();
+    if (!waitlistEmail) return;
+    setWaitlistStatus("loading");
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: waitlistEmail }),
+      });
+      if (res.ok) {
+        setWaitlistStatus("success");
+        setWaitlistEmail("");
+      } else {
+        setWaitlistStatus("error");
+      }
+    } catch {
+      setWaitlistStatus("error");
+    }
+  }
 
   async function handleScan(e: React.FormEvent) {
     e.preventDefault();
@@ -75,15 +118,15 @@ export default function Home() {
 
       {/* Hero */}
       <section className="max-w-3xl mx-auto px-6 pt-20 pb-16 text-center">
-        <div className="inline-block px-3 py-1 mb-6 text-xs text-red-400 border border-red-500/30 rounded-full bg-red-500/5">
-          AI sales agent · in beta
-        </div>
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-tight">
           Stop shouting<br />into the void.
         </h1>
-        <p className="text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-xl text-zinc-400 max-w-2xl mx-auto mb-6 leading-relaxed">
           Paste any link — a product, essay, song, bug fix, demo.
           We find the exact humans who&apos;d love it, and draft the message that gets their attention.
+        </p>
+        <p className="text-sm text-zinc-500 italic max-w-xl mx-auto mb-10">
+          Load your work. SellSniper finds the humans.
         </p>
 
         {/* Scan form */}
@@ -109,14 +152,14 @@ export default function Home() {
 
         {/* Results */}
         {error && (
-          <div className="mt-10 max-w-2xl mx-auto text-left border border-red-500/40 bg-red-500/5 rounded-lg p-4 text-sm text-red-300">
+          <div role="alert" aria-live="polite" className="mt-10 max-w-2xl mx-auto text-left border border-red-500/40 bg-red-500/5 rounded-lg p-4 text-sm text-red-300">
             {error}
           </div>
         )}
 
         {loading && !result && (
-          <div className="mt-10 max-w-2xl mx-auto text-left text-zinc-500 text-sm animate-pulse">
-            Reverse-engineering your link and mapping audience stages...
+          <div className="mt-10 max-w-2xl mx-auto text-left text-zinc-500 text-sm animate-pulse" aria-live="polite">
+            {loadingMessages[loadingStage]}
           </div>
         )}
 
@@ -162,9 +205,10 @@ export default function Home() {
                     </pre>
                     <button
                       onClick={() => copyMessage(stage.draft_message, idx)}
+                      aria-label={`Copy drafted message for ${stage.specific_location}`}
                       className="absolute top-2 right-2 px-2 py-1 text-xs border border-zinc-800 rounded bg-zinc-900 hover:border-zinc-600"
                     >
-                      {copiedIdx === idx ? "Copied" : "Copy"}
+                      <span aria-live="polite">{copiedIdx === idx ? "Copied" : "Copy"}</span>
                     </button>
                   </div>
                   {stage.best_time_to_post && (
@@ -268,12 +312,32 @@ export default function Home() {
               <li>Best time to post</li>
               <li>Auto-follow-up reminders</li>
             </ul>
-            <a
-              href="mailto:adam@anchormarianas.com?subject=SellSniper Pro waitlist"
-              className="block w-full py-3 bg-red-500 hover:bg-red-600 rounded-lg transition-colors font-semibold text-center cursor-pointer"
-            >
-              Join Pro waitlist
-            </a>
+            {waitlistStatus === "success" ? (
+              <div className="w-full py-3 text-center text-sm text-green-400 border border-green-500/30 rounded-lg bg-green-500/5">
+                You&apos;re in. We&apos;ll email when Pro opens.
+              </div>
+            ) : (
+              <form onSubmit={handleWaitlist} className="space-y-2">
+                <input
+                  type="email"
+                  required
+                  value={waitlistEmail}
+                  onChange={(e) => setWaitlistEmail(e.target.value)}
+                  placeholder="you@domain.com"
+                  className="w-full px-4 py-3 bg-black border border-zinc-800 rounded-lg focus:outline-none focus:border-red-500 text-white placeholder-zinc-600 text-sm"
+                />
+                <button
+                  type="submit"
+                  disabled={waitlistStatus === "loading" || !waitlistEmail}
+                  className="w-full py-3 bg-red-500 hover:bg-red-600 disabled:bg-zinc-800 disabled:text-zinc-500 rounded-lg transition-colors font-semibold"
+                >
+                  {waitlistStatus === "loading" ? "Joining..." : "Join Pro waitlist"}
+                </button>
+                {waitlistStatus === "error" && (
+                  <p className="text-xs text-red-400">Something broke. Try again?</p>
+                )}
+              </form>
+            )}
           </div>
         </div>
       </section>

@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 // --- rate limiting (in-memory; resets on cold start) -----------------------
 // 3 scans per IP per 24h for the free tier MVP.
@@ -100,6 +101,14 @@ async function fetchSnapshot(url: string): Promise<PageSnapshot> {
       },
     });
     if (!res.ok) throw new Error(`Fetch returned ${res.status}`);
+
+    const ct = (res.headers.get("content-type") ?? "").toLowerCase();
+    if (ct && !ct.includes("text/html") && !ct.includes("application/xhtml")) {
+      throw new Error(
+        "We can only scan web pages, not PDFs or images. Try the HTML landing page instead.",
+      );
+    }
+
     html = await res.text();
   } finally {
     clearTimeout(timer);
@@ -111,7 +120,7 @@ async function fetchSnapshot(url: string): Promise<PageSnapshot> {
   const h1 = h1Match ? decodeEntities(stripTags(h1Match[1])).trim() : "";
 
   const bodyMatch = html.match(/<body[\s\S]*?<\/body>/i);
-  const bodyText = stripTags(bodyMatch ? bodyMatch[0] : html).slice(0, 4000);
+  const bodyText = stripTags(bodyMatch ? bodyMatch[0] : html).slice(0, 8000);
 
   if (bodyText.length < 200 && !title) {
     throw new Error(
@@ -134,6 +143,9 @@ async function fetchSnapshot(url: string): Promise<PageSnapshot> {
 // --- Claude ------------------------------------------------------------------
 const SYSTEM_PROMPT = `You are SellSniper, an expert distribution strategist for indie makers.
 Given a URL and a snapshot of its content, identify exactly who would love it and the specific online stages where those humans hang out. For each stage, draft a genuine, non-spammy message tailored to that community's norms (no emojis unless the platform expects them; respect character limits; lead with value).
+
+IMPORTANT — no hallucinations. The "specific_location" field MUST be a real place you are confident exists. If you are uncertain whether a particular subreddit, Discord server, Slack, forum, or social handle is real, choose a more generic but verifiable alternative (for example, r/SideProject instead of r/IndieAppsPro). Never invent Twitter/X handles, Discord servers, Slack communities, or forum URLs. When in doubt, prefer well-known, long-established communities over obscure ones.
+
 Return STRICTLY valid JSON that matches the requested schema. No markdown fences. No commentary.`;
 
 function buildUserPrompt(snap: PageSnapshot): string {
@@ -241,12 +253,15 @@ export async function POST(req: NextRequest) {
   const anthropic = new Anthropic({ apiKey });
   let resultText = "";
   try {
-    const msg = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: buildUserPrompt(snapshot) }],
-    });
+    const msg = await anthropic.messages.create(
+      {
+        model: "claude-sonnet-4-5",
+        max_tokens: 4096,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: buildUserPrompt(snapshot) }],
+      },
+      { signal: AbortSignal.timeout(25_000) },
+    );
     for (const block of msg.content) {
       if (block.type === "text") resultText += block.text;
     }
@@ -261,14 +276,14 @@ export async function POST(req: NextRequest) {
   let parsed: ScanResult;
   try {
     parsed = extractJson(resultText);
-  } catch (err) {
-    return Response.json(
-      {
-        error: "Model did not return valid JSON",
-        raw: resultText.slice(0, 500),
-      },
-      { status: 502 },
-    );
+  } catch {
+    const payload: { error: string; raw?: string } = {
+      error: "Model did not return valid JSON",
+    };
+    if (process.env.NODE_ENV !== "production") {
+      payload.raw = resultText.slice(0, 500);
+    }
+    return Response.json(payload, { status: 502 });
   }
 
   return Response.json(

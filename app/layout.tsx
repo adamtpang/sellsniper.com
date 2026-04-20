@@ -32,14 +32,14 @@ export const metadata: Metadata = {
     url: "https://sellsniper.com",
     siteName: "SellSniper",
     type: "website",
-    images: [{ url: "/og.svg", width: 1200, height: 630, alt: "SellSniper — stop shouting into the void" }],
+    // og:image is auto-injected from app/opengraph-image.tsx (rasterized PNG, 1200x630).
   },
   twitter: {
     card: "summary_large_image",
     title: "SellSniper — Find the humans who'd love this",
     description:
       "Stop shouting into the void. Paste any link, find the exact humans who'd care.",
-    images: ["/og.svg"],
+    // twitter:image is auto-injected from app/twitter-image.tsx (rasterized PNG, 1200x630).
   },
 };
 
