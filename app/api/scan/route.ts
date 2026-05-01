@@ -257,13 +257,15 @@ export async function POST(req: NextRequest) {
   try {
     const msg = await anthropic.messages.create(
       {
-        model: "claude-sonnet-4-5",
+        // Haiku 4.5 — ~3-5x faster than Sonnet for this task and just as
+        // capable at ranking communities + drafting outreach. Sonnet was
+        // hitting the 50s abort on dense pages (e.g. sellsniper.com itself).
+        // If quality regresses on edge cases, swap back to "claude-sonnet-4-5".
+        model: "claude-haiku-4-5",
         max_tokens: 4096,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: buildUserPrompt(snapshot) }],
       },
-      // Give Claude up to 50s — generating 10 ranked stages with full drafts
-      // is a heavy ask. Stays under our 60s maxDuration with headroom.
       { signal: AbortSignal.timeout(50_000) },
     );
     for (const block of msg.content) {
