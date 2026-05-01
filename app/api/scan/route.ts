@@ -3,7 +3,9 @@ import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+// Sonnet 4.5 producing 10 ranked stages with full drafts can take 30-45s.
+// Vercel Pro plan allows up to 60s for nodejs runtime; bump if needed.
+export const maxDuration = 60;
 
 // --- rate limiting (in-memory; resets on cold start) -----------------------
 // 3 scans per IP per 24h for the free tier MVP.
@@ -260,7 +262,9 @@ export async function POST(req: NextRequest) {
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: buildUserPrompt(snapshot) }],
       },
-      { signal: AbortSignal.timeout(25_000) },
+      // Give Claude up to 50s — generating 10 ranked stages with full drafts
+      // is a heavy ask. Stays under our 60s maxDuration with headroom.
+      { signal: AbortSignal.timeout(50_000) },
     );
     for (const block of msg.content) {
       if (block.type === "text") resultText += block.text;
