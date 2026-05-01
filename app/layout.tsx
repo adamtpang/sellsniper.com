@@ -18,12 +18,15 @@ export const metadata: Metadata = {
   description:
     "Paste any link — a product, essay, song, bug fix, demo. SellSniper finds the exact humans who'd love it, and drafts the message that gets their attention. Stop shouting into the void.",
   keywords: [
-    "AI sales agent",
-    "product distribution",
+    "AI distribution agent",
+    "where to post",
+    "subreddit finder",
     "audience finder",
+    "indie maker tools",
     "viral launch",
     "Reddit marketing",
-    "indie hacker tools",
+    "GummySearch alternative",
+    "product distribution",
   ],
   openGraph: {
     title: "SellSniper — Find the humans who'd love this",

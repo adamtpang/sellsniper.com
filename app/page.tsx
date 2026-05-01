@@ -126,7 +126,7 @@ export default function Home() {
           We find the exact humans who&apos;d love it, and draft the message that gets their attention.
         </p>
         <p className="text-sm text-zinc-500 italic max-w-xl mx-auto mb-10">
-          Load your work. SellSniper finds the humans.
+          Not a sales tool. The distribution agent for makers.
         </p>
 
         {/* Scan form */}
@@ -309,8 +309,6 @@ export default function Home() {
               <li>Unlimited scans</li>
               <li>Top 20 stages per scan</li>
               <li>Personalized message drafts</li>
-              <li>Best time to post</li>
-              <li>Auto-follow-up reminders</li>
             </ul>
             {waitlistStatus === "success" ? (
               <div className="w-full py-3 text-center text-sm text-green-400 border border-green-500/30 rounded-lg bg-green-500/5">
